@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 )
@@ -16,6 +17,7 @@ func setupMockServer() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Mock server is serving at 8081")
 	rConn := bufio.NewReader(conn)
 	go func() {
 		for {
@@ -39,6 +41,7 @@ func mockSocket(readChan chan []byte, writeChan chan []byte) {
 	go writeLoop(conn, writeChan)
 	rChan := bufio.NewReader(conn)
 	go readLoop(rChan, readChan)
+	fmt.Println("Dialing to 8081")
 
 }
 

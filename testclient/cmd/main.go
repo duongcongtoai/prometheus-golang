@@ -25,6 +25,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -38,7 +39,9 @@ import (
 )
 
 var (
-	serverAddr = flag.String("server_addr", ":10000", "The server address in the format of host:port")
+	serverAddr = flag.String("server_addr", "localhost:10000", "The server address in the format of host:port")
+	port       = flag.Int("port", 10001, "http server port")
+	metricPort = flag.Int("metric_port", 4001, "metric port")
 )
 
 // printFeature gets the feature for the given point.
@@ -57,25 +60,38 @@ func randomPoint(r *rand.Rand) *pb.Point {
 
 func main() {
 	flag.Parse()
+	fmt.Println(*serverAddr)
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(":4001", nil))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricPort), nil))
 	}()
 	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithInsecure())
+	var conn *grpc.ClientConn
 
-	opts = append(opts, grpc.WithBlock())
-	conn, err := grpc.Dial(*serverAddr, opts...)
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
+	for i := 0; i < 3; i++ {
+		tryconn, err := grpc.Dial(*serverAddr, opts...)
+		if err != nil {
+			fmt.Printf("fail to dial: %v\n", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		conn = tryconn
+		break
 	}
+	if conn == nil {
+		log.Fatal("Failed to dial server")
+	}
+
+	fmt.Printf("Connected to grpc at %s\n", *serverAddr)
 	defer conn.Close()
 	client := pb.NewRouteGuideClient(conn)
 
 	// Looking for a valid feature
 	e := echo.New()
 	e.GET("/get", getHandler(client))
+	e.Start(fmt.Sprintf(":%d", *port))
 }
 
 func getHandler(client pb.RouteGuideClient) func(ctx echo.Context) error {

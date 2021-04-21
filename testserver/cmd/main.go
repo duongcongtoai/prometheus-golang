@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	port = flag.Int("port", 10000, "The server port")
+	port       = flag.Int("port", 10000, "The server port")
+	metricPort = flag.Int("metric_port", 4000, "Metric port")
 )
 
 type routeGuideServer struct {
@@ -200,13 +201,14 @@ func main() {
 	var opts []grpc.ServerOption
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(":4000", nil))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *metricPort), nil))
 	}()
 
 	grpcServer := grpc.NewServer(opts...)
 	inputChan := make(chan []byte, 10)
 	outputChan := make(chan []byte, 10)
 	pb.RegisterRouteGuideServer(grpcServer, newServer(inputChan, outputChan))
+	fmt.Printf("Preparing to serve at %d\n", *port)
 	grpcServer.Serve(lis)
 }
 

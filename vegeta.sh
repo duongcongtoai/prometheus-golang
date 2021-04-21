@@ -1,0 +1,1 @@
+echo "GET http://localhost:10001/get" | vegeta attack -duration=10m -rate=200 -output=report.bin

@@ -1,9 +1,15 @@
 version: "3.4"
 services:
-  webserver:
-    build: ./webserver
+  testclient:
+    build: ./testclient
     ports:
-      - 8080:8080
+      - 10001:10001
+      - 4001:4001
+  testserver:
+    build: ./testserver
+    ports:
+      - 10000:10000
+      - 4000:4000
   prometheus:
     image: prom/prometheus:v2.9.2
     ports:
